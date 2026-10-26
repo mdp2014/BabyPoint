@@ -321,6 +321,7 @@
   const voiceState = {
     supported: false,
     active: false,
+    isRecognizing: false,
     recognition: null,
     restartTimeout: null,
     feedbackTimeout: null
@@ -339,6 +340,10 @@
     recognition.interimResults = false;
     recognition.lang = 'fr-FR';
 
+    recognition.onstart = () => {
+      voiceState.isRecognizing = true;
+    };
+
     recognition.onresult = (event) => {
       const results = event.results;
       const lastResult = results[results.length - 1];
@@ -351,19 +356,26 @@
     recognition.onerror = (event) => {
       console.warn("Reconnaissance vocale :", event.error);
       if (event.error === 'not-allowed') {
-        toggleVoice(false);
-        showVoiceFeedback("Microphone non autorisé.", true);
+        voiceState.active = false;
+        voiceState.isRecognizing = false;
+        dom.btnVoice.classList.remove('active');
+        dom.voiceText.textContent = 'Micro bloqué';
+        dom.voiceBanner.style.display = 'flex';
+        showVoiceFeedback("⚠️ <strong>Microphone non autorisé</strong> : Cliquez sur le cadenas 🔒 à gauche de l'adresse web pour autoriser le micro.", true);
       }
     };
 
     recognition.onend = () => {
+      voiceState.isRecognizing = false;
       // Auto-redémarrage silencieux si toujours actif
       if (voiceState.active && !state.isMatchFinished) {
         clearTimeout(voiceState.restartTimeout);
         voiceState.restartTimeout = setTimeout(() => {
-          try {
-            recognition.start();
-          } catch (e) {}
+          if (voiceState.active && !voiceState.isRecognizing && voiceState.recognition) {
+            try {
+              voiceState.recognition.start();
+            } catch (e) {}
+          }
         }, 300);
       }
     };
@@ -371,9 +383,11 @@
     voiceState.recognition = recognition;
   }
 
-  function toggleVoice(forceState) {
+  function toggleVoice(forceState, silent = false) {
     if (!voiceState.supported) {
-      alert("La reconnaissance vocale nécessite Google Chrome, Microsoft Edge ou Safari.");
+      if (!silent) {
+        alert("La reconnaissance vocale nécessite Google Chrome, Microsoft Edge ou Safari.");
+      }
       return;
     }
 
@@ -381,18 +395,26 @@
     voiceState.active = nextState;
 
     if (nextState) {
-      try {
-        voiceState.recognition.start();
-      } catch (e) {}
+      if (!voiceState.isRecognizing && voiceState.recognition) {
+        try {
+          voiceState.recognition.start();
+        } catch (e) {
+          console.warn("Démarrage micro (en attente d'interaction) :", e);
+        }
+      }
       dom.btnVoice.classList.add('active');
       dom.voiceBanner.style.display = 'flex';
       dom.voiceText.textContent = 'En écoute';
       showVoiceFeedback("À l'écoute... Dites <strong>« Hé Baby »</strong> suivi de l'action (ex: <em>« Hé Baby, +1 pour bleu »</em>).");
-      playSound('tredemi');
+      if (!silent) {
+        playSound('tredemi');
+      }
     } else {
-      try {
-        voiceState.recognition.stop();
-      } catch (e) {}
+      if (voiceState.isRecognizing && voiceState.recognition) {
+        try {
+          voiceState.recognition.stop();
+        } catch (e) {}
+      }
       dom.btnVoice.classList.remove('active');
       dom.voiceBanner.style.display = 'none';
       dom.voiceText.textContent = 'Hé Baby';
@@ -1335,6 +1357,8 @@
       dom.modalSetup.style.display = 'none';
       dom.arenaMain.classList.remove('arena-locked');
       updateUI();
+      // Activation automatique de la commande vocale "Hé Baby" au démarrage
+      toggleVoice(true, true);
       startIntroCountdown(() => {
         startCountdown();
       });
@@ -1372,6 +1396,8 @@
       state.remainingSeconds = state.totalSeconds;
       resetMatchData();
       updateUI();
+      // Activation automatique de la commande vocale "Hé Baby"
+      toggleVoice(true, true);
       startIntroCountdown(() => {
         startCountdown();
       });
@@ -1421,6 +1447,25 @@
   function init() {
     initEvents();
     initVoiceControl();
+
+    // Activation automatique de "Hé Baby" dès le démarrage
+    if (voiceState.supported) {
+      toggleVoice(true, true);
+
+      // Assurer le démarrage effectif du micro dès la première interaction utilisateur
+      const unlockVoice = () => {
+        if (voiceState.supported && voiceState.active && !voiceState.isRecognizing && voiceState.recognition) {
+          try {
+            voiceState.recognition.start();
+          } catch (e) {}
+        }
+        window.removeEventListener('pointerdown', unlockVoice);
+        window.removeEventListener('keydown', unlockVoice);
+      };
+      window.addEventListener('pointerdown', unlockVoice, { passive: true });
+      window.addEventListener('keydown', unlockVoice, { passive: true });
+    }
+
     const urlParams = new URLSearchParams(window.location.search);
     if (urlParams.has('draw')) {
       dom.modalSetup.style.display = 'none';
@@ -1448,12 +1493,6 @@
     } else if (urlParams.has('direct') || urlParams.has('start') || urlParams.has('voice')) {
       dom.modalSetup.style.display = 'none';
       startCountdown();
-      if (urlParams.has('voice')) {
-        dom.btnVoice.classList.add('active');
-        dom.voiceBanner.style.display = 'flex';
-        dom.voiceText.textContent = 'En écoute';
-        showVoiceFeedback("À l'écoute... Dites <strong>« Hé Baby »</strong> suivi de l'action (ex: <em>« Hé Baby, +1 pour bleu »</em>). Les discussions sont ignorées.");
-      }
     } else {
       dom.modalSetup.style.display = 'flex';
     }
@@ -1464,6 +1503,13 @@
     }
     updateUI();
     renderCountdown();
+
+    if (urlParams.has('voice')) {
+      dom.btnVoice.classList.add('active');
+      dom.voiceBanner.style.display = 'flex';
+      dom.voiceText.textContent = 'En écoute';
+      showVoiceFeedback("À l'écoute... Dites <strong>« Hé Baby »</strong> suivi de l'action (ex: <em>« Hé Baby, +1 pour bleu »</em>). Les discussions sont ignorées.");
+    }
   }
 
   if (document.readyState === 'loading') {

@@ -78,6 +78,7 @@ Au lancement d'une partie ou lors d'une revanche, un **compte à rebours immersi
 
 Contrôlez les scores à la voix sans jamais lâcher les poignées du baby-foot !
 
+- **⚡ Activation automatique au démarrage** : La commande vocale s'active automatiquement dès le lancement de l'application et au démarrage du match (sans manipulation nécessaire). Vous pouvez toujours la couper ou la réactiver d'un clic sur le bouton 🎙️ dans l'en-tête.
 - **🔒 Filtrage strict (Zéro faux positif)** : L'application n'exécute une commande **que si vous prononcez le mot de réveil « Hé Baby »** au début. Vous pouvez parler, discuter ou crier pendant le match, l'assistant ignore toutes les conversations ordinaires.
 - **🗣️ Syntaxe des ordres vocaux** :
   - `« Hé Baby, +1 pour bleu »` (ou `« plus deux pour bleu »`) ➔ Ajoute les points au camp bleu.
