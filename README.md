@@ -27,6 +27,21 @@ xdg-open index.html
 
 ---
 
+## ⏱️ Compte à rebours animé de coup d'envoi (10 secondes)
+
+Au lancement d'une partie ou lors d'une revanche, un **compte à rebours immersif de 10 secondes** se déclenche :
+- **Grand anneau circulaire néon** : Se remplit de façon continue et fluide au rythme des secondes qui s'écoulent.
+- **Chiffre central dominant** : Chaque seconde (10, 9, 8... 1) est mise en valeur par une animation dynamique de grossissement (*scale pop*), d'apparition fluide et une onde de choc lumineuse.
+- **Bips sonores aigus** : Chaque chiffre est rythmé par un bip sonore aigu (Web Audio API) pour faire monter la tension, avec des tonalités encore plus aiguës sur 3, 2, 1.
+- **Coup d'envoi explosif** : À 0, affichage triomphal de **« C'EST PARTI ! »** accompagné du coup de sifflet d'engagement, avant le lancement direct du chronomètre de match.
+- **Touche passer** : Bouton `Passer le décompte ⏭️` (ou touche `Espace` / `Échap`) pour démarrer immédiatement si souhaité.
+
+| Décompte en cours (7s) | Coup d'envoi (C'est parti !) |
+| :---: | :---: |
+| ![Décompte 7s](intro_countdown_7s.png) | ![Coup d'envoi](intro_kickoff_go.png) |
+
+---
+
 ## 📋 Règles du jeu intégrées
 
 ### 1. Types de balles

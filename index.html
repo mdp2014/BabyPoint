@@ -416,6 +416,57 @@
       </div>
     </div>
 
+    <!-- MODAL 4 : COMPTE À REBOURS DE DÉMARRAGE (10 SECONDES AVEC CERCLE ET ANIMATIONS) -->
+    <div class="intro-overlay" id="intro-countdown-overlay" style="display: none;">
+      <div class="intro-backdrop"></div>
+      <div class="intro-card">
+        <div class="intro-top">
+          <span class="intro-badge">⚡ COUP D'ENVOI IMMINENT</span>
+          <h2 class="intro-versus" id="intro-versus">Marin <span class="intro-vs-tag">VS</span> Paul</h2>
+          <p class="intro-subtitle" id="intro-subtitle">Préparez vos mains sur les barres !</p>
+        </div>
+
+        <!-- GRAND CERCLE ANIMÉ ET CHIFFRE CENTRAL -->
+        <div class="intro-circle-container">
+          <svg class="intro-svg" viewBox="0 0 320 320">
+            <defs>
+              <linearGradient id="introRingGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" stop-color="#38bdf8" />
+                <stop offset="40%" stop-color="#818cf8" />
+                <stop offset="80%" stop-color="#ec4899" />
+                <stop offset="100%" stop-color="#f59e0b" />
+              </linearGradient>
+              <filter id="introGlowFilter" x="-20%" y="-20%" width="140%" height="140%">
+                <feGaussianBlur stdDeviation="5" result="blur" />
+                <feComposite in="SourceGraphic" in2="blur" operator="over" />
+              </filter>
+            </defs>
+
+            <!-- Anneau d'arrière-plan -->
+            <circle class="intro-ring-bg" cx="160" cy="160" r="140" />
+
+            <!-- Anneau de progression fluide avec gradient et lueur -->
+            <circle id="intro-ring-progress" class="intro-ring-progress" cx="160" cy="160" r="140" />
+          </svg>
+
+          <!-- Onde de choc circulaire pulsante à chaque seconde -->
+          <div class="intro-shockwave" id="intro-shockwave"></div>
+
+          <!-- Chiffre central dominant -->
+          <div class="intro-center-content">
+            <div class="intro-digit" id="intro-digit">10</div>
+            <div class="intro-unit" id="intro-unit">SECONDES</div>
+          </div>
+        </div>
+
+        <div class="intro-bottom">
+          <button type="button" class="btn-skip-intro" id="btn-skip-intro" title="Passer le compte à rebours (Espace)">
+            Passer le décompte ⏭️
+          </button>
+        </div>
+      </div>
+    </div>
+
   </div>
 
   <script src="app.js"></script>

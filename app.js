@@ -116,7 +116,16 @@
     btnRematch: document.getElementById('btn-rematch'),
     btnOvertime: document.getElementById('btn-overtime'),
     btnVictoryMenu: document.getElementById('btn-victory-menu'),
-    confettiCanvas: document.getElementById('confetti-canvas')
+    confettiCanvas: document.getElementById('confetti-canvas'),
+
+    // Compte à rebours de démarrage (10s)
+    introOverlay: document.getElementById('intro-countdown-overlay'),
+    introRingProgress: document.getElementById('intro-ring-progress'),
+    introShockwave: document.getElementById('intro-shockwave'),
+    introDigit: document.getElementById('intro-digit'),
+    introUnit: document.getElementById('intro-unit'),
+    introVersus: document.getElementById('intro-versus'),
+    btnSkipIntro: document.getElementById('btn-skip-intro')
   };
 
   // --- SYSTÈME AUDIO SYNTHÉTISÉ (Web Audio API) ---
@@ -252,6 +261,56 @@
         gain.gain.exponentialRampToValueAtTime(0.01, now + 0.1);
         osc.start(now);
         osc.stop(now + 0.1);
+      } else if (type === 'intro-beep') {
+        // Bip sonore aigu et net à chaque seconde
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(1046.5, now); // C6 aigu (1046 Hz)
+        gain.gain.setValueAtTime(0.3, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.09);
+        osc.start(now);
+        osc.stop(now + 0.09);
+      } else if (type === 'intro-final-beep') {
+        // Bip encore plus aigu et dynamique pour 3, 2, 1
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.type = 'triangle';
+        osc.frequency.setValueAtTime(1567.98, now); // G6 très aigu (1568 Hz)
+        gain.gain.setValueAtTime(0.35, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.13);
+        osc.start(now);
+        osc.stop(now + 0.13);
+      } else if (type === 'kickoff') {
+        // Coup de sifflet d'envoi et accord triomphal
+        const chord = [523.25, 659.25, 783.99, 1046.5];
+        chord.forEach((freq) => {
+          const osc = ctx.createOscillator();
+          const gain = ctx.createGain();
+          osc.connect(gain);
+          gain.connect(ctx.destination);
+          osc.type = 'triangle';
+          osc.frequency.setValueAtTime(freq, now);
+          gain.gain.setValueAtTime(0.2, now);
+          gain.gain.exponentialRampToValueAtTime(0.001, now + 0.65);
+          osc.start(now);
+          osc.stop(now + 0.65);
+        });
+        const whistleOsc = ctx.createOscillator();
+        const whistleGain = ctx.createGain();
+        whistleOsc.connect(whistleGain);
+        whistleGain.connect(ctx.destination);
+        whistleOsc.type = 'square';
+        whistleOsc.frequency.setValueAtTime(2600, now + 0.05);
+        whistleOsc.frequency.linearRampToValueAtTime(2350, now + 0.5);
+        whistleGain.gain.setValueAtTime(0.22, now + 0.05);
+        whistleGain.gain.exponentialRampToValueAtTime(0.001, now + 0.55);
+        whistleOsc.start(now + 0.05);
+        whistleOsc.stop(now + 0.55);
       }
     } catch (e) {
       console.warn("Audio non disponible", e);
@@ -493,6 +552,159 @@
     addHistoryEntry(historyItem);
     updateUI();
     showVoiceFeedback(`🎯 Validé : <strong>${sign} pour ${team.name}</strong> !`, true);
+  }
+
+  // --- COMPTE À REBOURS DE DÉMARRAGE (10 SECONDES AVEC CERCLE ET ANIMATIONS) ---
+  const introState = {
+    active: false,
+    rafId: null,
+    onComplete: null,
+    totalDurationMs: 10000,
+    startTime: null,
+    currentSecond: null
+  };
+
+  const CIRCLE_CIRCUMFERENCE = 879.65; // 2 * Math.PI * 140
+
+  function startIntroCountdown(onComplete) {
+    stopIntroCountdown(false);
+
+    introState.active = true;
+    introState.onComplete = onComplete;
+    introState.totalDurationMs = 10000;
+    introState.startTime = performance.now();
+    introState.currentSecond = 10;
+
+    if (dom.introVersus) {
+      dom.introVersus.innerHTML = `${state.camps[1].name} <span class="intro-vs-tag">VS</span> ${state.camps[2].name}`;
+    }
+
+    dom.introOverlay.classList.remove('fade-out');
+    dom.introOverlay.style.display = 'flex';
+    dom.introDigit.classList.remove('intro-go');
+    dom.introDigit.textContent = '10';
+    dom.introUnit.textContent = 'SECONDES';
+    dom.introRingProgress.style.strokeDashoffset = String(CIRCLE_CIRCUMFERENCE);
+
+    playSound('intro-beep');
+    triggerDigitPop();
+
+    function loop(now) {
+      if (!introState.active) return;
+
+      const elapsed = now - introState.startTime;
+      const progress = Math.min(1, Math.max(0, elapsed / introState.totalDurationMs));
+
+      // Remplissage fluide du cercle au rythme des secondes
+      const offset = CIRCLE_CIRCUMFERENCE * (1 - progress);
+      dom.introRingProgress.style.strokeDashoffset = String(offset);
+
+      // Calcul de la seconde restante (10 -> 1)
+      const remainingSeconds = Math.max(1, 10 - Math.floor(elapsed / 1000));
+
+      if (remainingSeconds !== introState.currentSecond && elapsed < introState.totalDurationMs) {
+        introState.currentSecond = remainingSeconds;
+        dom.introDigit.textContent = String(remainingSeconds);
+        dom.introUnit.textContent = remainingSeconds === 1 ? 'SECONDE' : 'SECONDES';
+
+        triggerDigitPop();
+
+        if (remainingSeconds <= 3) {
+          playSound('intro-final-beep');
+        } else {
+          playSound('intro-beep');
+        }
+      }
+
+      if (elapsed >= introState.totalDurationMs) {
+        finishIntroCountdown();
+        return;
+      }
+
+      introState.rafId = requestAnimationFrame(loop);
+    }
+
+    introState.rafId = requestAnimationFrame(loop);
+  }
+
+  function triggerDigitPop() {
+    if (!dom.introDigit) return;
+    dom.introDigit.classList.remove('intro-number-pop');
+    void dom.introDigit.offsetWidth; // Forcer le reflow du navigateur
+    dom.introDigit.classList.add('intro-number-pop');
+
+    if (dom.introShockwave) {
+      dom.introShockwave.classList.remove('pulse');
+      void dom.introShockwave.offsetWidth;
+      dom.introShockwave.classList.add('pulse');
+    }
+  }
+
+  function finishIntroCountdown() {
+    introState.active = false;
+    dom.introRingProgress.style.strokeDashoffset = '0';
+    dom.introDigit.classList.add('intro-go');
+    dom.introDigit.textContent = "C'EST PARTI !";
+    dom.introUnit.textContent = "COUP D'ENVOI !";
+    playSound('kickoff');
+
+    setTimeout(() => {
+      dom.introOverlay.classList.add('fade-out');
+      setTimeout(() => {
+        dom.introOverlay.style.display = 'none';
+        dom.introOverlay.classList.remove('fade-out');
+        const cb = introState.onComplete;
+        introState.onComplete = null;
+        if (typeof cb === 'function') {
+          cb();
+        }
+      }, 350);
+    }, 600);
+  }
+
+  function skipIntroCountdown() {
+    if (!introState.active) return;
+    stopIntroCountdown(true);
+  }
+
+  function stopIntroCountdown(triggerCallback) {
+    if (introState.rafId) {
+      cancelAnimationFrame(introState.rafId);
+      introState.rafId = null;
+    }
+    const wasActive = introState.active;
+    introState.active = false;
+    dom.introOverlay.style.display = 'none';
+    dom.introOverlay.classList.remove('fade-out');
+
+    if (triggerCallback && wasActive && typeof introState.onComplete === 'function') {
+      const cb = introState.onComplete;
+      introState.onComplete = null;
+      cb();
+    } else {
+      introState.onComplete = null;
+    }
+  }
+
+  function freezeIntroForSnapshot(val) {
+    dom.introOverlay.style.display = 'flex';
+    dom.introOverlay.classList.remove('fade-out');
+    if (dom.introVersus) {
+      dom.introVersus.innerHTML = `${state.camps[1].name} <span class="intro-vs-tag">VS</span> ${state.camps[2].name}`;
+    }
+    if (val === '0' || val === 'go') {
+      dom.introRingProgress.style.strokeDashoffset = '0';
+      dom.introDigit.classList.add('intro-go');
+      dom.introDigit.textContent = "C'EST PARTI !";
+      dom.introUnit.textContent = "COUP D'ENVOI !";
+    } else {
+      const num = parseInt(val, 10) || 7;
+      dom.introDigit.textContent = String(num);
+      dom.introUnit.textContent = num === 1 ? 'SECONDE' : 'SECONDES';
+      const progress = (10 - num) / 10;
+      dom.introRingProgress.style.strokeDashoffset = String(CIRCLE_CIRCUMFERENCE * (1 - progress));
+      triggerDigitPop();
+    }
   }
 
   // --- COMPTE À REBOURS DU MATCH ---
@@ -1122,8 +1334,10 @@
       resetMatchData();
       dom.modalSetup.style.display = 'none';
       dom.arenaMain.classList.remove('arena-locked');
-      startCountdown();
       updateUI();
+      startIntroCountdown(() => {
+        startCountdown();
+      });
     });
 
     // Modale Menu / Nouvelle Partie
@@ -1133,6 +1347,11 @@
     dom.btnCloseSetup.addEventListener('click', () => {
       dom.modalSetup.style.display = 'none';
     });
+
+    // Passer le décompte d'intro (10s)
+    if (dom.btnSkipIntro) {
+      dom.btnSkipIntro.addEventListener('click', skipIntroCountdown);
+    }
 
     // Notice des Règles
     dom.btnRules.addEventListener('click', () => {
@@ -1152,8 +1371,10 @@
       dom.arenaMain.classList.remove('arena-locked');
       state.remainingSeconds = state.totalSeconds;
       resetMatchData();
-      startCountdown();
       updateUI();
+      startIntroCountdown(() => {
+        startCountdown();
+      });
     });
 
     dom.btnOvertime.addEventListener('click', handleOvertime);
@@ -1165,6 +1386,11 @@
     });
 
     window.addEventListener('keydown', (e) => {
+      if (introState.active && (e.key === ' ' || e.key === 'Escape' || e.key === 'Enter')) {
+        e.preventDefault();
+        skipIntroCountdown();
+        return;
+      }
       if (e.key === 'Escape') {
         dom.modalSetup.style.display = 'none';
         dom.modalRules.style.display = 'none';
@@ -1211,6 +1437,14 @@
     } else if (urlParams.has('rules')) {
       dom.modalSetup.style.display = 'none';
       dom.modalRules.style.display = 'flex';
+    } else if (urlParams.has('intro_freeze')) {
+      dom.modalSetup.style.display = 'none';
+      freezeIntroForSnapshot(urlParams.get('intro_freeze'));
+    } else if (urlParams.has('intro')) {
+      dom.modalSetup.style.display = 'none';
+      startIntroCountdown(() => {
+        startCountdown();
+      });
     } else if (urlParams.has('direct') || urlParams.has('start') || urlParams.has('voice')) {
       dom.modalSetup.style.display = 'none';
       startCountdown();
