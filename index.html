@@ -28,6 +28,9 @@
       </div>
 
       <div class="header-actions">
+        <button id="btn-voice" class="btn-icon btn-voice" title="Activer la commande vocale (« Hé Baby »)" aria-label="Commande Vocale">
+          <span id="voice-icon">🎙️</span> <span class="btn-text" id="voice-text">Hé Baby</span>
+        </button>
         <button id="btn-pause" class="btn-icon" title="Mettre en pause ou reprendre le compte à rebours" aria-label="Pause">
           <span id="pause-icon">⏸️</span> <span class="btn-text" id="pause-text">Pause</span>
         </button>
@@ -48,6 +51,13 @@
         </button>
       </div>
     </header>
+
+    <!-- BANDEAU DE COMMANDE VOCALE "HÉ BABY" -->
+    <div id="voice-banner" class="voice-banner" style="display: none;">
+      <div class="voice-pulse"></div>
+      <span class="voice-badge">🎙️ HÉ BABY</span>
+      <span id="voice-status-text" class="voice-status-text">En veille... Dites <strong>« Hé Baby »</strong> suivi de l'action (ex: <em>« Hé Baby, +1 pour bleu »</em>). Les discussions sont ignorées.</span>
+    </div>
 
     <!-- ZONE PRINCIPALE : TABLEAU DE MATCH (VERSUS) -->
     <main class="arena-container" id="arena-main">

@@ -61,6 +61,11 @@
     // Header & Timer
     matchBadge: document.getElementById('match-badge'),
     timerBadge: document.getElementById('timer-badge'),
+    btnVoice: document.getElementById('btn-voice'),
+    voiceIcon: document.getElementById('voice-icon'),
+    voiceText: document.getElementById('voice-text'),
+    voiceBanner: document.getElementById('voice-banner'),
+    voiceStatusText: document.getElementById('voice-status-text'),
     btnPause: document.getElementById('btn-pause'),
     pauseIcon: document.getElementById('pause-icon'),
     pauseText: document.getElementById('pause-text'),
@@ -251,6 +256,243 @@
     } catch (e) {
       console.warn("Audio non disponible", e);
     }
+  }
+
+  // --- SYSTÈME DE COMMANDE VOCALE AVEC MOT-CLÉ « HÉ BABY » ---
+  const voiceState = {
+    supported: false,
+    active: false,
+    recognition: null,
+    restartTimeout: null,
+    feedbackTimeout: null
+  };
+
+  function initVoiceControl() {
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SpeechRecognition) {
+      voiceState.supported = false;
+      return;
+    }
+    voiceState.supported = true;
+
+    const recognition = new SpeechRecognition();
+    recognition.continuous = true;
+    recognition.interimResults = false;
+    recognition.lang = 'fr-FR';
+
+    recognition.onresult = (event) => {
+      const results = event.results;
+      const lastResult = results[results.length - 1];
+      if (!lastResult.isFinal) return;
+
+      const rawTranscript = lastResult[0].transcript.trim();
+      processVoiceCommand(rawTranscript);
+    };
+
+    recognition.onerror = (event) => {
+      console.warn("Reconnaissance vocale :", event.error);
+      if (event.error === 'not-allowed') {
+        toggleVoice(false);
+        showVoiceFeedback("Microphone non autorisé.", true);
+      }
+    };
+
+    recognition.onend = () => {
+      // Auto-redémarrage silencieux si toujours actif
+      if (voiceState.active && !state.isMatchFinished) {
+        clearTimeout(voiceState.restartTimeout);
+        voiceState.restartTimeout = setTimeout(() => {
+          try {
+            recognition.start();
+          } catch (e) {}
+        }, 300);
+      }
+    };
+
+    voiceState.recognition = recognition;
+  }
+
+  function toggleVoice(forceState) {
+    if (!voiceState.supported) {
+      alert("La reconnaissance vocale nécessite Google Chrome, Microsoft Edge ou Safari.");
+      return;
+    }
+
+    const nextState = forceState !== undefined ? forceState : !voiceState.active;
+    voiceState.active = nextState;
+
+    if (nextState) {
+      try {
+        voiceState.recognition.start();
+      } catch (e) {}
+      dom.btnVoice.classList.add('active');
+      dom.voiceBanner.style.display = 'flex';
+      dom.voiceText.textContent = 'En écoute';
+      showVoiceFeedback("À l'écoute... Dites <strong>« Hé Baby »</strong> suivi de l'action (ex: <em>« Hé Baby, +1 pour bleu »</em>).");
+      playSound('tredemi');
+    } else {
+      try {
+        voiceState.recognition.stop();
+      } catch (e) {}
+      dom.btnVoice.classList.remove('active');
+      dom.voiceBanner.style.display = 'none';
+      dom.voiceText.textContent = 'Hé Baby';
+    }
+  }
+
+  function showVoiceFeedback(htmlText, isAlert = false) {
+    if (!dom.voiceStatusText) return;
+    dom.voiceStatusText.innerHTML = htmlText;
+    dom.voiceBanner.classList.toggle('wake-detected', isAlert);
+
+    clearTimeout(voiceState.feedbackTimeout);
+    voiceState.feedbackTimeout = setTimeout(() => {
+      if (voiceState.active) {
+        dom.voiceBanner.classList.remove('wake-detected');
+        dom.voiceStatusText.innerHTML = `En veille... Dites <strong>« Hé Baby »</strong> suivi de l'action (ex: <em>« Hé Baby, +1 pour bleu »</em>). Les discussions sont ignorées.`;
+      }
+    }, 4500);
+  }
+
+  /**
+   * Traitement d'une commande vocale.
+   * RÈGLE ABSOLUE : S'active UNIQUEMENT si le mot de réveil "Hé Baby" est présent.
+   * Tout le reste des discussions de jeu est totalement ignoré.
+   */
+  function processVoiceCommand(rawTranscript) {
+    const text = rawTranscript.toLowerCase().replace(/['’]/g, ' ');
+
+    // Vérification stricte du Wake Word "Hé Baby"
+    const wakeWordRegex = /\b(h[eéè]y?|eh|et|haie|aie)?\s*bab[iy]\b/i;
+    const match = text.match(wakeWordRegex);
+
+    if (!match) {
+      // Pas de "Hé Baby" -> C'est une conversation entre joueurs, on IGNORE COMPLÈTEMENT !
+      return;
+    }
+
+    // Le mot de réveil est détecté ! On extrait le reste de la phrase après "Hé Baby"
+    const afterWake = text.substring(match.index + match[0].length).trim();
+    if (!afterWake) {
+      showVoiceFeedback("✨ <strong>« Hé Baby »</strong> détecté ! Quelle action ? (ex: <em>« +2 pour bleu »</em>)", true);
+      playSound('tredemi');
+      return;
+    }
+
+    // Détection de la cible (Bleu / Rouge ou noms personnalisés)
+    let targetTeam = null;
+    const name1 = state.camps[1].name.toLowerCase();
+    const name2 = state.camps[2].name.toLowerCase();
+
+    // Camp 1 (Rouge)
+    if (afterWake.includes('rouge') || afterWake.includes('rouges') || (name1 && afterWake.includes(name1))) {
+      targetTeam = 1;
+    }
+    // Camp 2 (Bleu)
+    if (afterWake.includes('bleu') || afterWake.includes('bleue') || afterWake.includes('bleus') || (name2 && afterWake.includes(name2))) {
+      targetTeam = 2;
+    }
+
+    // Commandes globales
+    if (afterWake.includes('pause') || afterWake.includes('reprendre')) {
+      togglePause();
+      showVoiceFeedback(`🎙️ <strong>Hé Baby</strong> : ${state.isPaused ? 'Partie en Pause' : 'Partie Reprise'}`, true);
+      return;
+    }
+    if (afterWake.includes('annuler') || afterWake.includes('retour')) {
+      undoLastAction();
+      showVoiceFeedback("🎙️ <strong>Hé Baby</strong> : Dernier coup annulé", true);
+      return;
+    }
+
+    // Détection de Tredemi
+    if (afterWake.includes('tredemi') || afterWake.includes('trédemi') || afterWake.includes('demi') || afterWake.includes('demis')) {
+      if (targetTeam) {
+        handleTredemi(targetTeam);
+        showVoiceFeedback(`⚡ <strong>Hé Baby</strong> : Tredemi appliqué pour <strong>${state.camps[targetTeam].name}</strong> !`, true);
+      } else {
+        showVoiceFeedback("🎙️ <strong>Hé Baby</strong> : Tredemi pour qui ? (dites <em>« Tredemi pour bleu »</em> ou <em>« Tredemi pour rouge »</em>)", true);
+      }
+      return;
+    }
+
+    // Détection de la valeur (+1, +2, +3, +4, -1, -2, -3)
+    let value = null;
+    // Vérifier les négatifs d'abord
+    if (/(?:^|[^\w])-\s*2\b|\b(moins|perte)\s*(2|deux)\b/i.test(afterWake)) {
+      value = -2;
+    } else if (/(?:^|[^\w])-\s*1\b|\b(moins|perte)\s*(1|un|une)\b/i.test(afterWake)) {
+      value = -1;
+    } else if (/(?:^|[^\w])-\s*3\b|\b(moins|perte)\s*(3|trois)\b/i.test(afterWake)) {
+      value = -3;
+    }
+    // Puis les positifs
+    else if (/(?:^|[^\w])\+\s*4\b|\b(plus|gain)\s*(4|quatre)\b|\bquatre\s*points?\b/i.test(afterWake)) {
+      value = 4;
+    } else if (/(?:^|[^\w])\+\s*3\b|\b(plus|gain)\s*(3|trois)\b|\btrois\s*points?\b/i.test(afterWake)) {
+      value = 3;
+    } else if (/(?:^|[^\w])\+\s*2\b|\b(plus|gain)\s*(2|deux)\b|\bdeux\s*points?\b/i.test(afterWake)) {
+      value = 2;
+    } else if (/(?:^|[^\w])\+\s*1\b|\b(plus|gain)\s*(1|un|une)\b|\bun\s*point\b/i.test(afterWake)) {
+      value = 1;
+    }
+
+    if (!targetTeam) {
+      showVoiceFeedback(`🎙️ <strong>Hé Baby</strong> : Précisez pour quelle équipe (ex: <em>« ${value ? (value > 0 ? '+' + value : value) : '+1'} pour bleu »</em>)`, true);
+      return;
+    }
+
+    if (value === null) {
+      showVoiceFeedback(`🎙️ <strong>Hé Baby</strong> : Précisez les points (+1, +2, -1, -2...) pour <strong>${state.camps[targetTeam].name}</strong>`, true);
+      return;
+    }
+
+    // Application directe demandée par l'utilisateur :
+    // "+2 pour bleu" -> +2 au bleu
+    // "-2 pour bleu" -> -2 au bleu (n'enlève pas au rouge)
+    applyVoiceDirectPoints(targetTeam, value);
+  }
+
+  function applyVoiceDirectPoints(targetTeam, value) {
+    if (state.isMatchFinished || state.isPaused) return;
+
+    const previousState = {
+      camps: JSON.parse(JSON.stringify(state.camps)),
+      historyItem: null
+    };
+
+    const team = state.camps[targetTeam];
+    team.score += value;
+
+    if (value > 0) {
+      team.stats['pos' + value] = (team.stats['pos' + value] || 0) + 1;
+      playSound('positive');
+    } else {
+      team.stats['neg' + Math.abs(value)] = (team.stats['neg' + Math.abs(value)] || 0) + 1;
+      playSound('negative');
+    }
+
+    triggerScorePulse(targetTeam);
+
+    const sign = value > 0 ? `+${value}` : `${value}`;
+    const logText = `🎙️ Commande vocale : <strong>${sign} pt(s)</strong> pour <strong>${team.name}</strong>`;
+    const now = new Date();
+    const timeStr = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}:${String(now.getSeconds()).padStart(2, '0')}`;
+    
+    const historyItem = {
+      team: targetTeam,
+      time: timeStr,
+      text: logText,
+      badgeClass: value > 0 ? 'badge-pos' : 'badge-neg',
+      badgeVal: `🎙️ ${sign}`
+    };
+
+    previousState.historyItem = historyItem;
+    state.undoStack.push(previousState);
+
+    addHistoryEntry(historyItem);
+    updateUI();
+    showVoiceFeedback(`🎯 Validé : <strong>${sign} pour ${team.name}</strong> !`, true);
   }
 
   // --- COMPTE À REBOURS DU MATCH ---
@@ -748,6 +990,11 @@
       });
     });
 
+    // Commande vocale "Hé Baby"
+    if (dom.btnVoice) {
+      dom.btnVoice.addEventListener('click', () => toggleVoice());
+    }
+
     // Pause / Reprendre
     dom.btnPause.addEventListener('click', togglePause);
     dom.btnResumeStatus.addEventListener('click', togglePause);
@@ -947,6 +1194,7 @@
   // --- DÉMARRAGE ---
   function init() {
     initEvents();
+    initVoiceControl();
     const urlParams = new URLSearchParams(window.location.search);
     if (urlParams.has('draw')) {
       dom.modalSetup.style.display = 'none';
@@ -963,9 +1211,15 @@
     } else if (urlParams.has('rules')) {
       dom.modalSetup.style.display = 'none';
       dom.modalRules.style.display = 'flex';
-    } else if (urlParams.has('direct') || urlParams.has('start')) {
+    } else if (urlParams.has('direct') || urlParams.has('start') || urlParams.has('voice')) {
       dom.modalSetup.style.display = 'none';
       startCountdown();
+      if (urlParams.has('voice')) {
+        dom.btnVoice.classList.add('active');
+        dom.voiceBanner.style.display = 'flex';
+        dom.voiceText.textContent = 'En écoute';
+        showVoiceFeedback("À l'écoute... Dites <strong>« Hé Baby »</strong> suivi de l'action (ex: <em>« Hé Baby, +1 pour bleu »</em>). Les discussions sont ignorées.");
+      }
     } else {
       dom.modalSetup.style.display = 'flex';
     }

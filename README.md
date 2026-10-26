@@ -51,7 +51,24 @@ xdg-open index.html
 ---
 
 ## ⌨️ Commandes & Ergonomie
+- **Commande Vocale « Hé Baby »** : bouton 🎙️ dans l'en-tête pour activer/désactiver le micro.
 - **Annuler** : bouton ↩️ Annuler ou raccourci clavier `Ctrl + Z`.
 - **Pause / Reprendre** : bouton ⏸️ Pause ou touche `Espace`.
 - **Plein écran** : bouton ⛶ pour un affichage immersif sur PC ou tablette.
 - **Personnalisation des noms** : cliquez directement sur les noms des joueurs pour les modifier en temps réel.
+
+---
+
+## 🎙️ Guide de la Commande Vocale « Hé Baby »
+
+Contrôlez les scores à la voix sans jamais lâcher les poignées du baby-foot !
+
+- **🔒 Filtrage strict (Zéro faux positif)** : L'application n'exécute une commande **que si vous prononcez le mot de réveil « Hé Baby »** au début. Vous pouvez parler, discuter ou crier pendant le match, l'assistant ignore toutes les conversations ordinaires.
+- **🗣️ Syntaxe des ordres vocaux** :
+  - `« Hé Baby, +1 pour bleu »` (ou `« plus deux pour bleu »`) ➔ Ajoute les points au camp bleu.
+  - `« Hé Baby, -2 pour bleu »` (ou `« moins deux pour bleu »`) ➔ Retire 2 points directement au camp bleu.
+  - `« Hé Baby, +2 pour rouge »` ➔ Ajoute 2 points au camp rouge.
+  - `« Hé Baby, -1 pour rouge »` ➔ Retire 1 point au camp rouge.
+  - `« Hé Baby, Tredemi pour bleu »` ➔ Valide les 3 points du Tredemi !
+  - `« Hé Baby, pause »` ou `« Hé Baby, annuler »`.
+- **📱 Navigateurs compatibles** : Google Chrome (PC, Mac, Android), Microsoft Edge et Safari.
