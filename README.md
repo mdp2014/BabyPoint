@@ -2,6 +2,8 @@
 
 Application web moderne en HTML, CSS et JavaScript pur (sans dépendance externe, 100% autonome et hors-ligne) pour arbitrer et compter les points du jeu **Baby Point**.
 
+🌐 **Jouer en ligne immédiatement** : [https://mdp2014.github.io/BabyPoint/](https://mdp2014.github.io/BabyPoint/)
+
 ![Aperçu du match Baby Point](arena_countdown.png)
 
 ---
