@@ -1,0 +1,396 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Baby Point - Compteur & Chrono de Match</title>
+  <link rel="stylesheet" href="style.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700;800;900&family=JetBrains+Mono:wght@500;700;800&display=swap" rel="stylesheet">
+</head>
+<body>
+  <div id="app" class="app-container">
+
+    <!-- BARRE SUPÉRIEURE DE NAVIGATION -->
+    <header class="app-header">
+      <div class="header-left">
+        <div class="logo">
+          <span class="logo-icon">⚽</span>
+          <span class="logo-text">BABY <strong>POINT</strong></span>
+        </div>
+        <span id="match-badge" class="badge-mode">1 vs 1</span>
+        <span id="timer-badge" class="badge-target">⏱️ Temps : 05:00</span>
+      </div>
+
+      <div class="header-actions">
+        <button id="btn-pause" class="btn-icon" title="Mettre en pause ou reprendre le compte à rebours" aria-label="Pause">
+          <span id="pause-icon">⏸️</span> <span class="btn-text" id="pause-text">Pause</span>
+        </button>
+        <button id="btn-rules" class="btn-icon" title="Voir les règles du jeu" aria-label="Règles">
+          📜 <span class="btn-text">Notice</span>
+        </button>
+        <button id="btn-undo" class="btn-icon" title="Annuler le dernier coup (Ctrl+Z)" aria-label="Annuler" disabled>
+          ↩️ <span class="btn-text">Annuler</span>
+        </button>
+        <button id="btn-sound" class="btn-icon" title="Activer/Désactiver le son" aria-label="Son">
+          🔊
+        </button>
+        <button id="btn-fullscreen" class="btn-icon" title="Plein écran" aria-label="Plein écran">
+          ⛶
+        </button>
+        <button id="btn-new-match" class="btn-secondary" title="Configurer une nouvelle partie">
+          ⚙️ <span class="btn-text">Menu</span>
+        </button>
+      </div>
+    </header>
+
+    <!-- ZONE PRINCIPALE : TABLEAU DE MATCH (VERSUS) -->
+    <main class="arena-container" id="arena-main">
+      
+      <!-- CAMP GAUCHE (CAMP 1) -->
+      <section class="camp-card camp-left" id="camp-1">
+        <div class="camp-header">
+          <div class="camp-avatar">🔴</div>
+          <div class="camp-info">
+            <h2 class="camp-name" id="name-camp-1" contenteditable="true" spellcheck="false" title="Cliquez pour renommer">Marin</h2>
+            <span class="camp-subtitle" id="sub-camp-1">Camp 1</span>
+          </div>
+          <div class="camp-quick-adjust">
+            <button class="btn-mini" data-action="manual" data-team="1" data-val="-1" title="-1 pt manuel">-</button>
+            <button class="btn-mini" data-action="manual" data-team="1" data-val="1" title="+1 pt manuel">+</button>
+          </div>
+        </div>
+
+        <div class="score-display-wrapper">
+          <div class="score-number" id="score-camp-1">0</div>
+          <div class="negative-alert" id="neg-alert-1" style="display: none;">
+            ⚠️ En négatif : « Moins un point »
+          </div>
+        </div>
+
+        <div class="ball-controllers">
+          <!-- BALLES POSITIVES -->
+          <div class="ball-group positive-group">
+            <div class="group-title">
+              <span class="dot green-dot"></span>
+              <span>Balles positives (fait gagner des points à <strong class="shooter-name-1">Marin</strong>)</span>
+            </div>
+            <div class="buttons-row grid-4">
+              <button class="btn-ball btn-pos" data-team="1" data-type="positive" data-value="1">
+                <span class="ball-value">+1</span>
+                <span class="ball-label">Balle</span>
+              </button>
+              <button class="btn-ball btn-pos" data-team="1" data-type="positive" data-value="2">
+                <span class="ball-value">+2</span>
+                <span class="ball-label">Balle</span>
+              </button>
+              <button class="btn-ball btn-pos" data-team="1" data-type="positive" data-value="3">
+                <span class="ball-value">+3</span>
+                <span class="ball-label">Balle</span>
+              </button>
+              <button class="btn-ball btn-pos" data-team="1" data-type="positive" data-value="4">
+                <span class="ball-value">+4</span>
+                <span class="ball-label">Balle</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- BALLES NÉGATIVES -->
+          <div class="ball-group negative-group">
+            <div class="group-title">
+              <span class="dot red-dot"></span>
+              <span>Balles négatives (fait perdre des points à <strong class="opponent-name-1">Paul</strong>)</span>
+            </div>
+            <div class="buttons-row grid-2">
+              <button class="btn-ball btn-neg" data-team="1" data-type="negative" data-value="-1">
+                <span class="ball-value">-1</span>
+                <span class="ball-label">Adversaire -1 pt</span>
+              </button>
+              <button class="btn-ball btn-neg" data-team="1" data-type="negative" data-value="-2">
+                <span class="ball-value">-2</span>
+                <span class="ball-label">Adversaire -2 pts</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- ACTION SPÉCIALE : TREDEMI (3 POINTS) -->
+          <div class="special-action-row">
+            <button class="btn-tredemi" data-team="1" id="btn-tredemi-1" title="Tir des Demis : applique la règle Tredemi (3 points en jeu)">
+              <span class="tredemi-icon">⚡</span>
+              <span class="tredemi-text">TREDEMI</span>
+              <span class="tredemi-badge" id="tredemi-badge-1">+3 pts</span>
+            </button>
+          </div>
+        </div>
+      </section>
+
+      <!-- SÉPARATEUR VERSUS AU CENTRE AVEC COMPTE À REBOURS -->
+      <div class="vs-divider">
+        <div class="vs-line"></div>
+        <div class="countdown-card" id="countdown-card" title="Temps restant">
+          <span class="countdown-label">FIN DANS</span>
+          <div class="countdown-timer" id="countdown-display">05:00</div>
+          <span class="countdown-status" id="countdown-status">En jeu</span>
+        </div>
+        <div class="vs-badge">VS</div>
+        <div class="vs-line"></div>
+      </div>
+
+      <!-- CAMP DROIT (CAMP 2) -->
+      <section class="camp-card camp-right" id="camp-2">
+        <div class="camp-header">
+          <div class="camp-avatar">🔵</div>
+          <div class="camp-info">
+            <h2 class="camp-name" id="name-camp-2" contenteditable="true" spellcheck="false" title="Cliquez pour renommer">Paul</h2>
+            <span class="camp-subtitle" id="sub-camp-2">Camp 2</span>
+          </div>
+          <div class="camp-quick-adjust">
+            <button class="btn-mini" data-action="manual" data-team="2" data-val="-1" title="-1 pt manuel">-</button>
+            <button class="btn-mini" data-action="manual" data-team="2" data-val="1" title="+1 pt manuel">+</button>
+          </div>
+        </div>
+
+        <div class="score-display-wrapper">
+          <div class="score-number" id="score-camp-2">0</div>
+          <div class="negative-alert" id="neg-alert-2" style="display: none;">
+            ⚠️ En négatif : « Moins un point »
+          </div>
+        </div>
+
+        <div class="ball-controllers">
+          <!-- BALLES POSITIVES -->
+          <div class="ball-group positive-group">
+            <div class="group-title">
+              <span class="dot green-dot"></span>
+              <span>Balles positives (fait gagner des points à <strong class="shooter-name-2">Paul</strong>)</span>
+            </div>
+            <div class="buttons-row grid-4">
+              <button class="btn-ball btn-pos" data-team="2" data-type="positive" data-value="1">
+                <span class="ball-value">+1</span>
+                <span class="ball-label">Balle</span>
+              </button>
+              <button class="btn-ball btn-pos" data-team="2" data-type="positive" data-value="2">
+                <span class="ball-value">+2</span>
+                <span class="ball-label">Balle</span>
+              </button>
+              <button class="btn-ball btn-pos" data-team="2" data-type="positive" data-value="3">
+                <span class="ball-value">+3</span>
+                <span class="ball-label">Balle</span>
+              </button>
+              <button class="btn-ball btn-pos" data-team="2" data-type="positive" data-value="4">
+                <span class="ball-value">+4</span>
+                <span class="ball-label">Balle</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- BALLES NÉGATIVES -->
+          <div class="ball-group negative-group">
+            <div class="group-title">
+              <span class="dot red-dot"></span>
+              <span>Balles négatives (fait perdre des points à <strong class="opponent-name-2">Marin</strong>)</span>
+            </div>
+            <div class="buttons-row grid-2">
+              <button class="btn-ball btn-neg" data-team="2" data-type="negative" data-value="-1">
+                <span class="ball-value">-1</span>
+                <span class="ball-label">Adversaire -1 pt</span>
+              </button>
+              <button class="btn-ball btn-neg" data-team="2" data-type="negative" data-value="-2">
+                <span class="ball-value">-2</span>
+                <span class="ball-label">Adversaire -2 pts</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- ACTION SPÉCIALE : TREDEMI (3 POINTS) -->
+          <div class="special-action-row">
+            <button class="btn-tredemi" data-team="2" id="btn-tredemi-2" title="Tir des Demis : applique la règle Tredemi (3 points en jeu)">
+              <span class="tredemi-icon">⚡</span>
+              <span class="tredemi-text">TREDEMI</span>
+              <span class="tredemi-badge" id="tredemi-badge-2">+3 pts</span>
+            </button>
+          </div>
+        </div>
+      </section>
+
+    </main>
+
+    <!-- BANDEAU D'ALERTE EN COURS DE PAUSE OU FIN -->
+    <div id="match-status-bar" class="match-status-bar" style="display: none;">
+      <span id="match-status-text">⏸️ Partie en pause</span>
+      <button id="btn-resume-status" class="btn-small-resume">Reprendre</button>
+    </div>
+
+    <!-- HISTORIQUE DU MATCH (LIVE LOG) -->
+    <footer class="history-panel">
+      <div class="history-header">
+        <span class="history-title">⏱️ Journal des actions en direct</span>
+        <button id="btn-clear-history" class="btn-link" title="Effacer l'historique">Vider journal</button>
+      </div>
+      <div class="history-list" id="history-list">
+        <div class="history-empty">Le compte à rebours est lancé ! Tirez une balle pour marquer des points.</div>
+      </div>
+    </footer>
+
+    <!-- MODAL 1 : CONFIGURATION DU MATCH (DÉMARRAGE) -->
+    <div class="modal-overlay" id="modal-setup">
+      <div class="modal-card">
+        <div class="modal-header">
+          <h2>⚙️ Configuration de la Partie</h2>
+          <button class="modal-close" id="btn-close-setup" title="Fermer">✕</button>
+        </div>
+        
+        <form id="setup-form">
+          <!-- CHOIX DU MODE -->
+          <div class="form-group">
+            <label class="form-label">Mode de jeu :</label>
+            <div class="mode-toggle">
+              <button type="button" class="btn-mode active" data-mode="solo">
+                <span class="mode-icon">👤 vs 👤</span>
+                <span class="mode-title">Mode Solo (1v1)</span>
+                <span class="mode-desc">1 joueur par camp</span>
+              </button>
+              <button type="button" class="btn-mode" data-mode="team">
+                <span class="mode-icon">👥 vs 👥</span>
+                <span class="mode-title">Mode Équipe</span>
+                <span class="mode-desc">2 joueurs ou équipe</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- NOMS DES CAMPS / JOUEURS -->
+          <div class="form-row">
+            <div class="form-group flex-1">
+              <label for="input-team1" class="form-label">🔴 Camp 1 (Gauche) :</label>
+              <input type="text" id="input-team1" class="form-input" value="Marin" placeholder="Nom ou Équipe 1" required>
+            </div>
+            <div class="form-group flex-1">
+              <label for="input-team2" class="form-label">🔵 Camp 2 (Droite) :</label>
+              <input type="text" id="input-team2" class="form-input" value="Paul" placeholder="Nom ou Équipe 2" required>
+            </div>
+          </div>
+
+          <!-- DURÉE DE LA PARTIE (COMPTE À REBOURS) -->
+          <div class="form-group">
+            <label class="form-label">⏱️ Durée du match (Fin au coup de sifflet) :</label>
+            <div class="duration-presets">
+              <button type="button" class="btn-preset" data-minutes="1">1 min ⚡</button>
+              <button type="button" class="btn-preset" data-minutes="3">3 min ⏱️</button>
+              <button type="button" class="btn-preset active" data-minutes="5">5 min 🎯</button>
+              <button type="button" class="btn-preset" data-minutes="10">10 min 🏆</button>
+            </div>
+            <div class="custom-duration-row">
+              <label for="input-custom-minutes" class="custom-label">Durée personnalisée :</label>
+              <div class="input-inline">
+                <input type="number" id="input-custom-minutes" class="form-input custom-input" min="1" max="60" value="5" step="1">
+                <span class="unit-text">minutes</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- FONCTIONNEMENT DU TREDEMI (3 POINTS) -->
+          <div class="form-group">
+            <label class="form-label">⚡ Règle du « Tredemi » (3 points en jeu) :</label>
+            <select id="select-demis-rule" class="form-select">
+              <option value="plus-3" selected>+3 points pour le tireur (But des demis spectaculaire)</option>
+              <option value="malus-3">-3 points pour le tireur (Pénalité demis interdits)</option>
+              <option value="bonus-opponent">+3 points offerts à l'adversaire (Faute aux demis)</option>
+            </select>
+          </div>
+
+          <div class="modal-footer">
+            <button type="submit" class="btn-primary btn-large">🚀 Lancer la partie</button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- MODAL 2 : NOTICE DU JEU (RÈGLES D'ORIGINE) -->
+    <div class="modal-overlay" id="modal-rules" style="display: none;">
+      <div class="modal-card">
+        <div class="modal-header">
+          <h2>🎯 Règles du Baby Point</h2>
+          <button class="modal-close" id="btn-close-rules" title="Fermer">✕</button>
+        </div>
+        <div class="rules-content">
+          <p class="rules-intro">
+            Le <strong>Baby Point</strong> est un jeu où les joueurs se lancent des balles avec des nombres (comme -2, -1, +2, +3, etc.). Ces balles font gagner ou perdre des points aux joueurs.
+          </p>
+
+          <div class="rule-box">
+            <h3>🔢 Types de balles</h3>
+            <ul>
+              <li><strong>-1</strong> : balle moins un</li>
+              <li><strong>-2</strong> : balle moins deux</li>
+              <li><strong>+1, +2, +3, +4</strong> : balles positives</li>
+            </ul>
+          </div>
+
+          <div class="rule-box neg-box">
+            <h3>🟥 Balles négatives (ex : -1 et -2)</h3>
+            <ul>
+              <li>Si Marin tire une balle <strong>-1</strong> dans le camp de Paul, alors Paul <strong>perd 1 point</strong>.</li>
+              <li>Si Paul avait 0 point, il passe à <strong>-1 point</strong>.</li>
+              <li>👉 <em>On dit alors qu'il a "moins un point".</em></li>
+            </ul>
+          </div>
+
+          <div class="rule-box pos-box">
+            <h3>🟩 Balles positives (ex : +1, +2, +3, +4)</h3>
+            <ul>
+              <li>Quand Marin tire une balle positive dans le camp de Paul, **Marin gagne le point inscrit sur la balle**.</li>
+            </ul>
+          </div>
+
+          <div class="rule-box demis-box">
+            <h3>⚡ Les demis (« Tredemis »)</h3>
+            <ul>
+              <li>Fonctionne comme les demis au baby-foot, avec <strong>3 points en jeu</strong>.</li>
+              <li>Un clic sur le bouton <strong>TREDEMI</strong> applique directement les 3 points selon la variante choisie.</li>
+            </ul>
+          </div>
+
+          <div class="rule-box timer-box">
+            <h3>⏱️ Durée & Fin de partie</h3>
+            <ul>
+              <li>Le match se joue au <strong>compte à rebours</strong> (1, 3, 5, 10 min ou personnalisé).</li>
+              <li>Au coup de sifflet final (00:00), les scores sont bloqués et le vainqueur est célébré. En cas d'égalité, le <strong>match nul</strong> est fêté avec prolongations possibles !</li>
+            </ul>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn-primary" id="btn-ok-rules">J'ai compris !</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- MODAL 3 : CÉLÉBRATION DE FIN DE PARTIE (VICTOIRE OU MATCH NUL) -->
+    <div class="modal-overlay" id="modal-victory" style="display: none;">
+      <canvas id="confetti-canvas"></canvas>
+      <div class="modal-card victory-card" id="victory-card">
+        <div class="victory-trophy" id="victory-icon">🏆</div>
+        <h2 class="victory-title" id="winner-title">Temps écoulé !</h2>
+        <p class="victory-score" id="winner-score-summary">Score final : 10 - 6</p>
+
+        <div class="winner-congrats" id="winner-congrats">
+          Magnifique prestation !
+        </div>
+
+        <div class="match-stats" id="match-stats">
+          <!-- Injecté dynamiquement par app.js -->
+        </div>
+
+        <div class="victory-buttons">
+          <button class="btn-primary btn-large" id="btn-rematch">🔄 Revanche (Même durée)</button>
+          <button class="btn-warning btn-large" id="btn-overtime" style="display: none;">⏱️ Prolongation (+1 min)</button>
+          <button class="btn-secondary btn-large" id="btn-victory-menu">⚙️ Nouvelle partie</button>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
