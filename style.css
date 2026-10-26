@@ -111,9 +111,13 @@ body {
   letter-spacing: -0.5px;
 }
 
-.logo-icon {
-  font-size: 1.4rem;
-  filter: drop-shadow(0 0 8px rgba(255, 255, 255, 0.3));
+.logo-img {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  box-shadow: 0 0 12px rgba(245, 158, 11, 0.4);
+  display: block;
+  object-fit: contain;
 }
 
 .logo-text strong {
