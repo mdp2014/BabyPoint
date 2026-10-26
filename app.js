@@ -91,6 +91,8 @@
     setupForm: document.getElementById('setup-form'),
     inputTeam1: document.getElementById('input-team1'),
     inputTeam2: document.getElementById('input-team2'),
+    labelTeam1: document.getElementById('label-team1'),
+    labelTeam2: document.getElementById('label-team2'),
     inputCustomMinutes: document.getElementById('input-custom-minutes'),
     selectDemisRule: document.getElementById('select-demis-rule'),
     btnCloseSetup: document.getElementById('btn-close-setup'),
@@ -453,13 +455,17 @@
     dom.shooter2.forEach(el => el.textContent = state.camps[2].name);
     dom.opponent2.forEach(el => el.textContent = state.camps[1].name);
 
-    if (state.mode === 'team') {
-      dom.subCamp1.textContent = 'Équipe 1';
-      dom.subCamp2.textContent = 'Équipe 2';
-      dom.matchBadge.textContent = 'Mode Équipe';
+    if (state.mode === '1v2') {
+      dom.subCamp1.textContent = '👤 Joueur Solo';
+      dom.subCamp2.textContent = '👥 Équipe (2 joueurs)';
+      dom.matchBadge.textContent = '1 vs 2 (Asymétrique)';
+    } else if (state.mode === 'team') {
+      dom.subCamp1.textContent = '👥 Équipe 1';
+      dom.subCamp2.textContent = '👥 Équipe 2';
+      dom.matchBadge.textContent = 'Mode Équipe (2v2)';
     } else {
-      dom.subCamp1.textContent = 'Camp 1';
-      dom.subCamp2.textContent = 'Camp 2';
+      dom.subCamp1.textContent = '👤 Joueur Solo';
+      dom.subCamp2.textContent = '👤 Joueur Solo';
       dom.matchBadge.textContent = '1 vs 1 (Solo)';
     }
 
@@ -798,16 +804,31 @@
       dom.historyList.innerHTML = `<div class="history-empty">Journal réinitialisé.</div>`;
     });
 
-    // Mode Toggle (Solo vs Équipe)
+    // Mode Toggle (Solo vs 1v2 vs Équipe)
     document.querySelectorAll('.btn-mode').forEach(btn => {
       btn.addEventListener('click', () => {
         document.querySelectorAll('.btn-mode').forEach(b => b.classList.remove('active'));
         btn.classList.add('active');
         const mode = btn.getAttribute('data-mode');
-        if (mode === 'team') {
-          dom.inputTeam1.value = 'Équipe Bleue';
-          dom.inputTeam2.value = 'Équipe Rouge';
+        if (mode === '1v2') {
+          if (dom.labelTeam1) dom.labelTeam1.textContent = '🔴 Joueur Solo (1 joueur) :';
+          if (dom.labelTeam2) dom.labelTeam2.textContent = '🔵 Nom de l\'équipe (2 joueurs) :';
+          dom.inputTeam1.placeholder = 'Nom de la personne seule (ex: Marin)';
+          dom.inputTeam2.placeholder = 'Nom de l\'équipe (ex: Les Invincibles)';
+          dom.inputTeam1.value = 'Marin';
+          dom.inputTeam2.value = 'Équipe Bleue';
+        } else if (mode === 'team') {
+          if (dom.labelTeam1) dom.labelTeam1.textContent = '🔴 Nom de l\'équipe 1 (2 joueurs) :';
+          if (dom.labelTeam2) dom.labelTeam2.textContent = '🔵 Nom de l\'équipe 2 (2 joueurs) :';
+          dom.inputTeam1.placeholder = 'Ex: Équipe Rouge';
+          dom.inputTeam2.placeholder = 'Ex: Équipe Bleue';
+          dom.inputTeam1.value = 'Équipe Rouge';
+          dom.inputTeam2.value = 'Équipe Bleue';
         } else {
+          if (dom.labelTeam1) dom.labelTeam1.textContent = '🔴 Joueur 1 (Gauche) :';
+          if (dom.labelTeam2) dom.labelTeam2.textContent = '🔵 Joueur 2 (Droite) :';
+          dom.inputTeam1.placeholder = 'Nom du joueur 1';
+          dom.inputTeam2.placeholder = 'Nom du joueur 2';
           dom.inputTeam1.value = 'Marin';
           dom.inputTeam2.value = 'Paul';
         }
@@ -944,6 +965,11 @@
       startCountdown();
     } else {
       dom.modalSetup.style.display = 'flex';
+    }
+    if (urlParams.get('mode') === '1v2') {
+      state.mode = '1v2';
+      state.camps[1].name = 'Marin';
+      state.camps[2].name = 'Équipe Bleue';
     }
     updateUI();
     renderCountdown();

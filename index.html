@@ -248,13 +248,18 @@
             <div class="mode-toggle">
               <button type="button" class="btn-mode active" data-mode="solo">
                 <span class="mode-icon">👤 vs 👤</span>
-                <span class="mode-title">Mode Solo (1v1)</span>
+                <span class="mode-title">Solo (1v1)</span>
                 <span class="mode-desc">1 joueur par camp</span>
+              </button>
+              <button type="button" class="btn-mode" data-mode="1v2">
+                <span class="mode-icon">👤 vs 👥</span>
+                <span class="mode-title">1 contre 2 (1v2)</span>
+                <span class="mode-desc">Solo vs Équipe</span>
               </button>
               <button type="button" class="btn-mode" data-mode="team">
                 <span class="mode-icon">👥 vs 👥</span>
-                <span class="mode-title">Mode Équipe</span>
-                <span class="mode-desc">2 joueurs ou équipe</span>
+                <span class="mode-title">Équipes (2v2)</span>
+                <span class="mode-desc">2 joueurs par camp</span>
               </button>
             </div>
           </div>
@@ -262,12 +267,12 @@
           <!-- NOMS DES CAMPS / JOUEURS -->
           <div class="form-row">
             <div class="form-group flex-1">
-              <label for="input-team1" class="form-label">🔴 Camp 1 (Gauche) :</label>
-              <input type="text" id="input-team1" class="form-input" value="Marin" placeholder="Nom ou Équipe 1" required>
+              <label for="input-team1" class="form-label" id="label-team1">🔴 Joueur 1 (Gauche) :</label>
+              <input type="text" id="input-team1" class="form-input" value="Marin" placeholder="Nom du joueur" required>
             </div>
             <div class="form-group flex-1">
-              <label for="input-team2" class="form-label">🔵 Camp 2 (Droite) :</label>
-              <input type="text" id="input-team2" class="form-input" value="Paul" placeholder="Nom ou Équipe 2" required>
+              <label for="input-team2" class="form-label" id="label-team2">🔵 Joueur 2 (Droite) :</label>
+              <input type="text" id="input-team2" class="form-input" value="Paul" placeholder="Nom du joueur" required>
             </div>
           </div>
 

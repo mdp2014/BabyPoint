@@ -19,7 +19,15 @@ xdg-open index.html
 
 ---
 
-## 🎯 Règles du jeu intégrées
+## 🎯 Modes de jeu disponibles
+
+- **Mode Solo (1v1)** : 1 joueur contre 1 joueur (Marin vs Paul).
+- **Mode Asymétrique (1v2)** : 1 joueur tout seul contre une équipe de 2 joueurs (nom du joueur solo + nom de l'équipe des 2 joueurs).
+- **Mode Équipe (2v2)** : 2 équipes s'affrontent.
+
+---
+
+## 📋 Règles du jeu intégrées
 
 ### 1. Types de balles
 - **Balles positives (+1, +2, +3, +4)** : Lorsqu'un joueur tire une balle positive dans le camp adverse, **il gagne les points inscrits sur la balle**.
