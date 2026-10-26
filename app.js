@@ -960,6 +960,9 @@
       state.camps[2].score = 5;
       updateUI();
       handleTimeUp(true);
+    } else if (urlParams.has('rules')) {
+      dom.modalSetup.style.display = 'none';
+      dom.modalRules.style.display = 'flex';
     } else if (urlParams.has('direct') || urlParams.has('start')) {
       dom.modalSetup.style.display = 'none';
       startCountdown();

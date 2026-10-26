@@ -40,6 +40,10 @@ xdg-open index.html
 - **Victoire** : Célébration spectaculaire avec pluie de confettis et trophée pour le vainqueur.
 - **Match Nul** : En cas d'égalité, célébration festive du match nul avec proposition immédiate de prolongations (+1 min en mort subite) !
 
+### 3. Interdictions & Fautes
+- **Interdiction de la Roulette** : Dès qu'un joueur fait une roulette, **il perd automatiquement 2 points** (à déduire manuellement via le bouton `-` de son camp).
+- **Tir depuis le Goal** : Dès qu'on marque directement du goal (gardien), **le but ne rapporte aucun point** (0 point ajouté).
+
 | Configuration du match | Célébration de Victoire |
 | :---: | :---: |
 | ![Configuration](setup_duration.png) | ![Victoire](victory_celebration.png) |
