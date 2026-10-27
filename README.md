@@ -74,17 +74,22 @@ Au lancement d'une partie ou lors d'une revanche, un **compte à rebours immersi
 
 ---
 
-## 🎙️ Guide de la Commande Vocale « Hé Baby »
+## 🎙️ Guide de la Commande Vocale Intelligente « Hé Baby »
 
 Contrôlez les scores à la voix sans jamais lâcher les poignées du baby-foot !
 
-- **⚡ Activation automatique au démarrage** : La commande vocale s'active automatiquement dès le lancement de l'application et au démarrage du match (sans manipulation nécessaire). Vous pouvez toujours la couper ou la réactiver d'un clic sur le bouton 🎙️ dans l'en-tête.
-- **🔒 Filtrage strict (Zéro faux positif)** : L'application n'exécute une commande **que si vous prononcez le mot de réveil « Hé Baby »** au début. Vous pouvez parler, discuter ou crier pendant le match, l'assistant ignore toutes les conversations ordinaires.
-- **🗣️ Syntaxe des ordres vocaux** :
-  - `« Hé Baby, +1 pour bleu »` (ou `« plus deux pour bleu »`) ➔ Ajoute les points au camp bleu.
-  - `« Hé Baby, -2 pour bleu »` (ou `« moins deux pour bleu »`) ➔ Retire 2 points directement au camp bleu.
-  - `« Hé Baby, +2 pour rouge »` ➔ Ajoute 2 points au camp rouge.
-  - `« Hé Baby, -1 pour rouge »` ➔ Retire 1 point au camp rouge.
-  - `« Hé Baby, Tredemi pour bleu »` ➔ Valide les 3 points du Tredemi !
-  - `« Hé Baby, pause »` ou `« Hé Baby, annuler »`.
+- **⚡ Activation automatique au démarrage** : La commande vocale s'active automatiquement dès l'ouverture de l'application et au démarrage du match. Vous pouvez la couper ou la réactiver à tout moment d'un clic sur le bouton 🎙️ dans l'en-tête.
+- **🧠 Moteur vocal ultra-intelligent & tolérant** :
+  - **Reconnaissance phonétique avancée** : comprend *« Hé Baby »*, *« Hey Baby »*, *« Et Baby »*, *« Eh Baby »*, ainsi que les transcriptions fréquentes de Google *« Bébé »*, *« Hé Bébé »*, *« Et Bébé »*, *« Babi »*, *« BB »*.
+  - **Flux en continu (Streaming)** : détection ultra-rapide sans temps d'attente, affichage en direct dans le bandeau de ce qui est entendu.
+  - **Évaluation multi-hypothèses** : analyse simultanée de plusieurs alternatives phonétiques pour ne jamais rater un ordre.
+  - **Watchdog anti-coupure** : maintien en vie automatique du micro pour éviter toute déconnexion silencieuse en arrière-plan.
+- **🗣️ Formules naturelles reconnues (parlez comme vous jouez !)** :
+  - `« Hé Baby, 1 pour bleu »` ou `« Hé Baby, +1 pour bleu »` ➔ +1 point pour Bleu 🔵
+  - `« Hé Baby, deux pour rouge »` ou `« Hé Baby, +2 pour rouge »` ➔ +2 points pour Rouge 🔴
+  - `« Hé Baby, -2 pour bleu »` ou `« moins deux à Paul »` ➔ Retire 2 points à Bleu 🔵
+  - `« Hé Baby, ajoute 3 points à Marin »` ➔ +3 points pour Marin 🔴
+  - `« Hé Baby, roulette pour bleu »` ➔ Applique automatiquement la pénalité Roulette (-2 points) !
+  - `« Hé Baby, Tredemi bleu »` ➔ Applique immédiatement la règle des demis (+3 points) !
+  - `« Hé Baby, pause »`, `« Hé Baby, reprendre »`, `« Hé Baby, annuler »`.
 - **📱 Navigateurs compatibles** : Google Chrome (PC, Mac, Android), Microsoft Edge et Safari.

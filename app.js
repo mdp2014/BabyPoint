@@ -317,15 +317,126 @@
     }
   }
 
-  // --- SYSTÈME DE COMMANDE VOCALE AVEC MOT-CLÉ « HÉ BABY » ---
+  // --- SYSTÈME DE COMMANDE VOCALE INTELLIGENT « HÉ BABY » ---
   const voiceState = {
     supported: false,
     active: false,
     isRecognizing: false,
     recognition: null,
     restartTimeout: null,
-    feedbackTimeout: null
+    feedbackTimeout: null,
+    watchdogInterval: null,
+    lastCommandTime: 0,
+    lastCommandHash: ''
   };
+
+  /**
+   * Normalisation phonétique du texte (suppression des accents, ponctuation, tirets)
+   */
+  function normalizeSpeech(str) {
+    if (!str) return '';
+    return str
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '') // Supprime accents (é, è, ê, à, etc.)
+      .replace(/['’\-]/g, ' ')
+      .replace(/[^\w\s\+]/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim();
+  }
+
+  /**
+   * Analyseur sémantique ultra-tolérant des commandes vocales
+   */
+  function parseVoiceCommand(rawTranscript) {
+    if (!rawTranscript) return { recognized: false };
+    const norm = normalizeSpeech(rawTranscript);
+
+    // 1. Détection du Wake Word "Hé Baby" sous toutes ses variantes phonétiques
+    // Couvre "hé baby", "hey baby", "eh baby", "et baby", "ok baby", "dis baby", "salut baby"
+    // ET "bébé", "et bébé", "hé bébé", "hey bébé", "babi", "bébi", "bb" (transcription la plus fréquente de Google !)
+    const wakeRegex = /\b(?:h[eéè]y?|eh|et|haie|aie|ok|hello|salut|dis)?\s*(?:bab[iy]|bebe|bebi|babi|bb|bayby)\b/i;
+    const match = norm.match(wakeRegex);
+
+    if (!match) {
+      return { recognized: false, reason: 'no_wake_word' };
+    }
+
+    const afterWake = norm.substring(match.index + match[0].length).trim();
+    if (!afterWake) {
+      return { recognized: true, action: 'wake_only' };
+    }
+
+    // 2. Commandes globales de gestion du match
+    if (/\b(pause|stop|arrete?|arret|temps mort)\b/.test(afterWake)) {
+      return { recognized: true, action: 'pause' };
+    }
+    if (/\b(reprend(re)?|continue|reparti|play|relance)\b/.test(afterWake)) {
+      return { recognized: true, action: 'resume' };
+    }
+    if (/\b(annul(er?|e)|retour|erreur|trompe|correction|undo)\b/.test(afterWake)) {
+      return { recognized: true, action: 'undo' };
+    }
+
+    // 3. Détection de l'équipe ciblée (Bleu / Rouge, Noms des camps, Postes)
+    let targetTeam = null;
+    const name1 = normalizeSpeech(state.camps[1].name);
+    const name2 = normalizeSpeech(state.camps[2].name);
+
+    const isTeam1 = /\b(rouge|rouges?|red|gauche|camp 1|joueur 1|equipe 1|solo)\b/.test(afterWake) || (name1 && afterWake.includes(name1));
+    const isTeam2 = /\b(bleu|bleue?s?|blue|droite|camp 2|joueur 2|equipe 2|equipe)\b/.test(afterWake) || (name2 && afterWake.includes(name2));
+
+    if (isTeam1 && !isTeam2) targetTeam = 1;
+    else if (isTeam2 && !isTeam1) targetTeam = 2;
+    else if (isTeam1 && isTeam2) {
+      const idx1 = afterWake.search(/\b(rouge|rouges?|red|gauche|camp 1|joueur 1|equipe 1|solo)\b/);
+      const idx2 = afterWake.search(/\b(bleu|bleue?s?|blue|droite|camp 2|joueur 2|equipe 2|equipe)\b/);
+      targetTeam = (idx1 !== -1 && (idx2 === -1 || idx1 < idx2)) ? 1 : 2;
+    }
+
+    // 4. Détection de l'action Tredemi (3 points)
+    if (/\b(tredemi|tr[eé]demi|demi|demis)\b/.test(afterWake)) {
+      return { recognized: true, action: 'tredemi', team: targetTeam };
+    }
+
+    // 5. Détection de la pénalité Roulette (-2 points)
+    if (/\broulette\b/.test(afterWake)) {
+      return { recognized: true, action: 'points', team: targetTeam, value: -2, reason: 'roulette' };
+    }
+
+    // 6. Détection de la valeur (+1, +2, +3, +4, -1, -2, -3)
+    let value = null;
+
+    // A. Négatifs
+    if (/(?:^|\s)-\s*2\b|\b(?:moins|perte|retire|enleve|supprime)\s*(?:2|deux)\b/.test(afterWake)) {
+      value = -2;
+    } else if (/(?:^|\s)-\s*1\b|\b(?:moins|perte|retire|enleve|supprime)\s*(?:1|un|une)\b/.test(afterWake)) {
+      value = -1;
+    } else if (/(?:^|\s)-\s*3\b|\b(?:moins|perte|retire|enleve|supprime)\s*(?:3|trois)\b/.test(afterWake)) {
+      value = -3;
+    }
+    // B. Positifs explicites
+    else if (/(?:^|\s)\+\s*4\b|\b(?:plus|gain|ajoute|met|mets|donne|marque)\s*(?:4|quatre)\b|\b(?:4|quatre)\s*points?\b/.test(afterWake)) {
+      value = 4;
+    } else if (/(?:^|\s)\+\s*3\b|\b(?:plus|gain|ajoute|met|mets|donne|marque)\s*(?:3|trois)\b|\b(?:3|trois)\s*points?\b/.test(afterWake)) {
+      value = 3;
+    } else if (/(?:^|\s)\+\s*2\b|\b(?:plus|gain|ajoute|met|mets|donne|marque)\s*(?:2|deux)\b|\b(?:2|deux)\s*points?\b/.test(afterWake)) {
+      value = 2;
+    } else if (/(?:^|\s)\+\s*1\b|\b(?:plus|gain|ajoute|met|mets|donne|marque)\s*(?:1|un|une)\b|\b(?:1|un|une)\s*points?\b/.test(afterWake)) {
+      value = 1;
+    }
+    // C. Formes naturelles directes : "1 pour bleu", "deux pour rouge", "bleu 2", "rouge 1"
+    else {
+      const numMatch = afterWake.match(/\b(1|2|3|4|un|une|deux|trois|quatre)\b/);
+      if (numMatch) {
+        const word = numMatch[1];
+        const map = { '1': 1, 'un': 1, 'une': 1, '2': 2, 'deux': 2, '3': 3, 'trois': 3, '4': 4, 'quatre': 4 };
+        value = map[word] || null;
+      }
+    }
+
+    return { recognized: true, action: 'points', team: targetTeam, value: value };
+  }
 
   function initVoiceControl() {
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
@@ -337,7 +448,8 @@
 
     const recognition = new SpeechRecognition();
     recognition.continuous = true;
-    recognition.interimResults = false;
+    recognition.interimResults = true; // Détection ultra-réactive en streaming
+    recognition.maxAlternatives = 3;    // Évalue jusqu'à 3 hypothèses pour maximiser le taux de reconnaissance
     recognition.lang = 'fr-FR';
 
     recognition.onstart = () => {
@@ -345,15 +457,51 @@
     };
 
     recognition.onresult = (event) => {
-      const results = event.results;
-      const lastResult = results[results.length - 1];
-      if (!lastResult.isFinal) return;
+      let finalTranscript = '';
+      let interimTranscript = '';
 
-      const rawTranscript = lastResult[0].transcript.trim();
-      processVoiceCommand(rawTranscript);
+      for (let i = event.resultIndex; i < event.results.length; i++) {
+        const result = event.results[i];
+        if (result.isFinal) {
+          finalTranscript += result[0].transcript + ' ';
+        } else {
+          interimTranscript += result[0].transcript + ' ';
+        }
+
+        // Évaluer toutes les alternatives phonétiques générées par le moteur
+        for (let j = 0; j < result.length; j++) {
+          const altTranscript = result[j].transcript.trim();
+          const parsed = parseVoiceCommand(altTranscript);
+
+          if (parsed.recognized && parsed.action !== 'wake_only') {
+            const hash = `${parsed.action}_${parsed.team}_${parsed.value}`;
+            const now = Date.now();
+            // Anti-rebond : évite d'appliquer deux fois la même consigne en continu
+            if (hash === voiceState.lastCommandHash && (now - voiceState.lastCommandTime) < 1500) {
+              return;
+            }
+            voiceState.lastCommandHash = hash;
+            voiceState.lastCommandTime = now;
+
+            executeVoiceCommand(parsed);
+            return;
+          } else if (parsed.recognized && parsed.action === 'wake_only') {
+            showVoiceFeedback("✨ <strong>« Hé Baby »</strong> détecté ! Précisez votre commande (ex: <em>« +1 pour bleu »</em>)", 'wake');
+          }
+        }
+      }
+
+      // Affichage du flux vocal en temps réel dans le bandeau pour rassurer les joueurs
+      const heard = (finalTranscript || interimTranscript).trim();
+      if (heard && !dom.voiceBanner.classList.contains('success')) {
+        showVoiceFeedback(`🎙️ Écoute : <em>« ${heard.slice(-50)} »</em>`, 'hearing');
+      }
     };
 
     recognition.onerror = (event) => {
+      if (event.error === 'no-speech' || event.error === 'aborted') {
+        return;
+      }
       console.warn("Reconnaissance vocale :", event.error);
       if (event.error === 'not-allowed') {
         voiceState.active = false;
@@ -361,13 +509,20 @@
         dom.btnVoice.classList.remove('active');
         dom.voiceText.textContent = 'Micro bloqué';
         dom.voiceBanner.style.display = 'flex';
-        showVoiceFeedback("⚠️ <strong>Microphone non autorisé</strong> : Cliquez sur le cadenas 🔒 à gauche de l'adresse web pour autoriser le micro.", true);
+        showVoiceFeedback("⚠️ <strong>Microphone non autorisé</strong> : Cliquez sur le cadenas 🔒 à gauche de l'adresse web pour autoriser le micro.", 'error');
+      } else if (event.error === 'network') {
+        clearTimeout(voiceState.restartTimeout);
+        voiceState.restartTimeout = setTimeout(() => {
+          if (voiceState.active && !voiceState.isRecognizing) {
+            try { recognition.start(); } catch(e) {}
+          }
+        }, 1000);
       }
     };
 
     recognition.onend = () => {
       voiceState.isRecognizing = false;
-      // Auto-redémarrage silencieux si toujours actif
+      // Auto-redémarrage quasi-instantané en tâche de fond
       if (voiceState.active && !state.isMatchFinished) {
         clearTimeout(voiceState.restartTimeout);
         voiceState.restartTimeout = setTimeout(() => {
@@ -376,11 +531,65 @@
               voiceState.recognition.start();
             } catch (e) {}
           }
-        }, 300);
+        }, 200);
       }
     };
 
     voiceState.recognition = recognition;
+
+    // Watchdog de maintien en vie toutes les 3 secondes pour éviter toute coupure silencieuse
+    if (voiceState.watchdogInterval) clearInterval(voiceState.watchdogInterval);
+    voiceState.watchdogInterval = setInterval(() => {
+      if (voiceState.active && !voiceState.isRecognizing && !state.isMatchFinished && voiceState.recognition) {
+        try {
+          voiceState.recognition.start();
+        } catch (e) {}
+      }
+    }, 3000);
+  }
+
+  function executeVoiceCommand(cmd) {
+    if (cmd.action === 'pause') {
+      if (!state.isPaused) togglePause();
+      showVoiceFeedback("⏸️ <strong>Hé Baby</strong> : Partie mise en pause", 'success');
+      return;
+    }
+
+    if (cmd.action === 'resume') {
+      if (state.isPaused) togglePause();
+      showVoiceFeedback("▶️ <strong>Hé Baby</strong> : Partie reprise !", 'success');
+      return;
+    }
+
+    if (cmd.action === 'undo') {
+      undoLastAction();
+      showVoiceFeedback("↩️ <strong>Hé Baby</strong> : Dernier coup annulé !", 'success');
+      return;
+    }
+
+    if (cmd.action === 'tredemi') {
+      if (cmd.team) {
+        handleTredemi(cmd.team);
+        showVoiceFeedback(`⚡ <strong>Hé Baby</strong> : Tredemi validé pour <strong>${state.camps[cmd.team].name}</strong> !`, 'success');
+      } else {
+        showVoiceFeedback("🎙️ <strong>Hé Baby</strong> : Tredemi pour qui ? (ex: <em>« Tredemi pour bleu »</em>)", 'wake');
+      }
+      return;
+    }
+
+    if (cmd.action === 'points') {
+      if (!cmd.team) {
+        showVoiceFeedback(`🎙️ <strong>Hé Baby</strong> : Précisez l'équipe (ex: <em>« ${cmd.value ? (cmd.value > 0 ? '+' + cmd.value : cmd.value) : '+1'} pour bleu »</em>)`, 'wake');
+        return;
+      }
+
+      if (cmd.value === null || cmd.value === undefined) {
+        showVoiceFeedback(`🎙️ <strong>Hé Baby</strong> : Précisez les points (+1, +2, -1, -2...) pour <strong>${state.camps[cmd.team].name}</strong>`, 'wake');
+        return;
+      }
+
+      applyVoiceDirectPoints(cmd.team, cmd.value, cmd.reason);
+    }
   }
 
   function toggleVoice(forceState, silent = false) {
@@ -421,120 +630,29 @@
     }
   }
 
-  function showVoiceFeedback(htmlText, isAlert = false) {
-    if (!dom.voiceStatusText) return;
+  function showVoiceFeedback(htmlText, typeOrAlert = 'normal') {
+    if (!dom.voiceStatusText || !dom.voiceBanner) return;
     dom.voiceStatusText.innerHTML = htmlText;
-    dom.voiceBanner.classList.toggle('wake-detected', isAlert);
+
+    const type = typeof typeOrAlert === 'boolean' ? (typeOrAlert ? 'wake' : 'normal') : typeOrAlert;
+
+    dom.voiceBanner.classList.remove('wake-detected', 'hearing', 'success', 'error');
+    if (type === 'wake') dom.voiceBanner.classList.add('wake-detected');
+    else if (type === 'hearing') dom.voiceBanner.classList.add('hearing');
+    else if (type === 'success') dom.voiceBanner.classList.add('success');
+    else if (type === 'error') dom.voiceBanner.classList.add('error');
 
     clearTimeout(voiceState.feedbackTimeout);
+    const delay = type === 'success' ? 4000 : (type === 'hearing' ? 2500 : 4500);
     voiceState.feedbackTimeout = setTimeout(() => {
       if (voiceState.active) {
-        dom.voiceBanner.classList.remove('wake-detected');
+        dom.voiceBanner.classList.remove('wake-detected', 'hearing', 'success', 'error');
         dom.voiceStatusText.innerHTML = `En veille... Dites <strong>« Hé Baby »</strong> suivi de l'action (ex: <em>« Hé Baby, +1 pour bleu »</em>). Les discussions sont ignorées.`;
       }
-    }, 4500);
+    }, delay);
   }
 
-  /**
-   * Traitement d'une commande vocale.
-   * RÈGLE ABSOLUE : S'active UNIQUEMENT si le mot de réveil "Hé Baby" est présent.
-   * Tout le reste des discussions de jeu est totalement ignoré.
-   */
-  function processVoiceCommand(rawTranscript) {
-    const text = rawTranscript.toLowerCase().replace(/['’]/g, ' ');
-
-    // Vérification stricte du Wake Word "Hé Baby"
-    const wakeWordRegex = /\b(h[eéè]y?|eh|et|haie|aie)?\s*bab[iy]\b/i;
-    const match = text.match(wakeWordRegex);
-
-    if (!match) {
-      // Pas de "Hé Baby" -> C'est une conversation entre joueurs, on IGNORE COMPLÈTEMENT !
-      return;
-    }
-
-    // Le mot de réveil est détecté ! On extrait le reste de la phrase après "Hé Baby"
-    const afterWake = text.substring(match.index + match[0].length).trim();
-    if (!afterWake) {
-      showVoiceFeedback("✨ <strong>« Hé Baby »</strong> détecté ! Quelle action ? (ex: <em>« +2 pour bleu »</em>)", true);
-      playSound('tredemi');
-      return;
-    }
-
-    // Détection de la cible (Bleu / Rouge ou noms personnalisés)
-    let targetTeam = null;
-    const name1 = state.camps[1].name.toLowerCase();
-    const name2 = state.camps[2].name.toLowerCase();
-
-    // Camp 1 (Rouge)
-    if (afterWake.includes('rouge') || afterWake.includes('rouges') || (name1 && afterWake.includes(name1))) {
-      targetTeam = 1;
-    }
-    // Camp 2 (Bleu)
-    if (afterWake.includes('bleu') || afterWake.includes('bleue') || afterWake.includes('bleus') || (name2 && afterWake.includes(name2))) {
-      targetTeam = 2;
-    }
-
-    // Commandes globales
-    if (afterWake.includes('pause') || afterWake.includes('reprendre')) {
-      togglePause();
-      showVoiceFeedback(`🎙️ <strong>Hé Baby</strong> : ${state.isPaused ? 'Partie en Pause' : 'Partie Reprise'}`, true);
-      return;
-    }
-    if (afterWake.includes('annuler') || afterWake.includes('retour')) {
-      undoLastAction();
-      showVoiceFeedback("🎙️ <strong>Hé Baby</strong> : Dernier coup annulé", true);
-      return;
-    }
-
-    // Détection de Tredemi
-    if (afterWake.includes('tredemi') || afterWake.includes('trédemi') || afterWake.includes('demi') || afterWake.includes('demis')) {
-      if (targetTeam) {
-        handleTredemi(targetTeam);
-        showVoiceFeedback(`⚡ <strong>Hé Baby</strong> : Tredemi appliqué pour <strong>${state.camps[targetTeam].name}</strong> !`, true);
-      } else {
-        showVoiceFeedback("🎙️ <strong>Hé Baby</strong> : Tredemi pour qui ? (dites <em>« Tredemi pour bleu »</em> ou <em>« Tredemi pour rouge »</em>)", true);
-      }
-      return;
-    }
-
-    // Détection de la valeur (+1, +2, +3, +4, -1, -2, -3)
-    let value = null;
-    // Vérifier les négatifs d'abord
-    if (/(?:^|[^\w])-\s*2\b|\b(moins|perte)\s*(2|deux)\b/i.test(afterWake)) {
-      value = -2;
-    } else if (/(?:^|[^\w])-\s*1\b|\b(moins|perte)\s*(1|un|une)\b/i.test(afterWake)) {
-      value = -1;
-    } else if (/(?:^|[^\w])-\s*3\b|\b(moins|perte)\s*(3|trois)\b/i.test(afterWake)) {
-      value = -3;
-    }
-    // Puis les positifs
-    else if (/(?:^|[^\w])\+\s*4\b|\b(plus|gain)\s*(4|quatre)\b|\bquatre\s*points?\b/i.test(afterWake)) {
-      value = 4;
-    } else if (/(?:^|[^\w])\+\s*3\b|\b(plus|gain)\s*(3|trois)\b|\btrois\s*points?\b/i.test(afterWake)) {
-      value = 3;
-    } else if (/(?:^|[^\w])\+\s*2\b|\b(plus|gain)\s*(2|deux)\b|\bdeux\s*points?\b/i.test(afterWake)) {
-      value = 2;
-    } else if (/(?:^|[^\w])\+\s*1\b|\b(plus|gain)\s*(1|un|une)\b|\bun\s*point\b/i.test(afterWake)) {
-      value = 1;
-    }
-
-    if (!targetTeam) {
-      showVoiceFeedback(`🎙️ <strong>Hé Baby</strong> : Précisez pour quelle équipe (ex: <em>« ${value ? (value > 0 ? '+' + value : value) : '+1'} pour bleu »</em>)`, true);
-      return;
-    }
-
-    if (value === null) {
-      showVoiceFeedback(`🎙️ <strong>Hé Baby</strong> : Précisez les points (+1, +2, -1, -2...) pour <strong>${state.camps[targetTeam].name}</strong>`, true);
-      return;
-    }
-
-    // Application directe demandée par l'utilisateur :
-    // "+2 pour bleu" -> +2 au bleu
-    // "-2 pour bleu" -> -2 au bleu (n'enlève pas au rouge)
-    applyVoiceDirectPoints(targetTeam, value);
-  }
-
-  function applyVoiceDirectPoints(targetTeam, value) {
+  function applyVoiceDirectPoints(targetTeam, value, reason) {
     if (state.isMatchFinished || state.isPaused) return;
 
     const previousState = {
@@ -556,7 +674,8 @@
     triggerScorePulse(targetTeam);
 
     const sign = value > 0 ? `+${value}` : `${value}`;
-    const logText = `🎙️ Commande vocale : <strong>${sign} pt(s)</strong> pour <strong>${team.name}</strong>`;
+    const logDesc = reason === 'roulette' ? 'Pénalité Roulette (-2 pts)' : `${sign} pt(s)`;
+    const logText = `🎙️ Commande vocale : <strong>${logDesc}</strong> pour <strong>${team.name}</strong>`;
     const now = new Date();
     const timeStr = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}:${String(now.getSeconds()).padStart(2, '0')}`;
     
@@ -573,7 +692,7 @@
 
     addHistoryEntry(historyItem);
     updateUI();
-    showVoiceFeedback(`🎯 Validé : <strong>${sign} pour ${team.name}</strong> !`, true);
+    showVoiceFeedback(`✅ <strong>Hé Baby</strong> : <strong>${sign} pt(s)</strong> validé(s) pour <strong>${team.name}</strong> !`, 'success');
   }
 
   // --- COMPTE À REBOURS DE DÉMARRAGE (10 SECONDES AVEC CERCLE ET ANIMATIONS) ---

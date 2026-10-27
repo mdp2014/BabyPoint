@@ -754,6 +754,35 @@ body {
   animation: wakePulse 0.4s ease;
 }
 
+.voice-banner.hearing {
+  background: rgba(56, 189, 248, 0.16);
+  border-color: #38bdf8;
+  color: #bae6fd;
+}
+
+.voice-banner.hearing .voice-pulse {
+  background: #38bdf8;
+  box-shadow: 0 0 12px #38bdf8;
+}
+
+.voice-banner.success {
+  background: rgba(16, 185, 129, 0.28);
+  border-color: #10b981;
+  color: #ecfdf5;
+  animation: successPulse 0.4s ease;
+}
+
+@keyframes successPulse {
+  0% { transform: scale(0.98); }
+  50% { transform: scale(1.02); }
+  100% { transform: scale(1); }
+}
+
+.voice-banner.success .voice-pulse {
+  background: #10b981;
+  box-shadow: 0 0 16px #10b981;
+}
+
 @keyframes wakePulse {
   0% { transform: scale(0.98); }
   50% { transform: scale(1.02); }
